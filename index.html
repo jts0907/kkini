@@ -122,6 +122,15 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 .btn-primary{background:var(--c);color:#fff}
 .btn-ghost{background:var(--line2);color:var(--ink)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.date-nav{display:flex;align-items:center;gap:0}
+.navbtn{background:none;border:none;font-size:22px;color:var(--sub);cursor:pointer;padding:0 6px;line-height:1}
+.navbtn:disabled{opacity:.25}
+.datebtn{background:none;border:none;cursor:pointer;padding:2px 4px;display:flex;align-items:baseline;gap:6px;color:var(--ink)}
+.date-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:16px;top:40px}
+.mode-pick{display:flex;gap:6px;margin-bottom:14px}
+.mode-pick button{flex:1;padding:9px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13px;cursor:pointer;color:var(--sub);font-weight:600}
+.mode-pick button.on{border-color:var(--c);color:var(--c);background:#eff6ff}
+.calc.preview{margin:0 0 14px}
 
 /* report */
 .rep-week{display:flex;gap:4px;margin:6px 0 14px}
@@ -151,7 +160,12 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 
 <header>
   <div class="hd-top">
-    <div><span class="hd-title">오늘의 기록</span><span class="hd-date num" id="date"></span></div>
+    <div class="date-nav">
+      <button class="navbtn" id="prevDay" title="이전 날">‹</button>
+      <button class="datebtn" id="datePick"><span class="hd-title" id="viewTitle">오늘</span><span class="hd-date num" id="date"></span></button>
+      <button class="navbtn" id="nextDay" title="다음 날">›</button>
+      <input type="date" id="dateInput" class="date-hidden">
+    </div>
     <div class="hd-btns">
       <button class="iconbtn" id="btnReport" title="주간 리포트">📊</button>
       <button class="iconbtn" id="btnSettings" title="목표 설정">⚙</button>
@@ -178,7 +192,7 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 <div class="list" id="list"></div>
 
 <div class="today">
-  <h2>오늘 먹은 것</h2>
+  <h2 id="todayHead">오늘 먹은 것</h2>
   <div id="todayList"></div>
 </div>
 
@@ -207,17 +221,27 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 <div class="modal" id="customModal">
   <div class="sheet">
     <h3>직접 추가</h3>
-    <div class="msub">100g 기준 영양성분을 입력하면 내 목록에 저장됩니다.</div>
-    <div class="field"><label>음식 이름</label><input id="cName" placeholder="예: 우리집 김치찌개"></div>
+    <div class="msub" id="cModeDesc">제품 총량과 성분을 넣으면 100g 기준으로 자동 환산해 저장합니다.</div>
+    <div class="mode-pick" id="cModePick">
+      <button data-mode="total" class="on">제품 총량 기준</button>
+      <button data-mode="per100">100g 기준</button>
+    </div>
+    <div class="field"><label>음식 이름</label><input id="cName" placeholder="예: OO 진미채"></div>
+    <div class="field" id="cWeightField"><label id="cWeightLabel">제품 총량 (g)</label><input class="num" id="cWeight" type="number" inputmode="decimal" placeholder="예: 50"></div>
     <div class="grid2">
-      <div class="field"><label>열량 (kcal)</label><input class="num" id="cKcal" type="number" inputmode="decimal"></div>
+      <div class="field"><label id="cKcalLabel">열량 (kcal)</label><input class="num" id="cKcal" type="number" inputmode="decimal"></div>
       <div class="field"><label>단백질 (g)</label><input class="num" id="cP" type="number" inputmode="decimal"></div>
       <div class="field"><label>탄수화물 (g)</label><input class="num" id="cC" type="number" inputmode="decimal"></div>
       <div class="field"><label>지방 (g)</label><input class="num" id="cF" type="number" inputmode="decimal"></div>
     </div>
-    <div class="row2" style="margin-top:6px">
+    <div class="meal-pick" id="cMealPick"></div>
+    <div class="calc preview" id="cCalc"></div>
+    <div class="row2">
       <button class="btn btn-ghost" onclick="closeCustom()">취소</button>
-      <button class="btn btn-primary" onclick="saveCustom()">저장</button>
+      <button class="btn btn-ghost" onclick="saveCustom(false)">저장만</button>
+    </div>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="saveCustom(true)">저장하고 담기</button>
     </div>
   </div>
 </div>
@@ -281,12 +305,33 @@ if(history===null){
 }
 const MEALS = ['아침','점심','저녁','간식'];
 function dateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+day; }
-const todayStr = dateStr(new Date());
-if(!history[todayStr]) history[todayStr] = [];
+const realToday = dateStr(new Date());
+let viewDate = realToday;
+if(!history[realToday]) history[realToday] = [];
 
 function pool(){ return custom.concat(FOODS); }
 function findFood(name){ return pool().find(f=>f.name===name); }
-function todayItems(){ return history[todayStr]; }
+function viewItems(){ if(!history[viewDate]) history[viewDate]=[]; return history[viewDate]; }
+
+function updateHeader(){
+  const d=new Date(viewDate+'T00:00:00');
+  document.getElementById('date').textContent=d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  const yst=dateStr(new Date(Date.now()-86400000));
+  let title='기록';
+  if(viewDate===realToday) title='오늘';
+  else if(viewDate===yst) title='어제';
+  else title='';
+  document.getElementById('viewTitle').textContent=title;
+  document.getElementById('todayHead').textContent=(viewDate===realToday?'오늘':d.toLocaleDateString('ko-KR',{month:'long',day:'numeric'}))+' 먹은 것';
+  document.getElementById('nextDay').disabled = viewDate>=realToday;
+  const di=document.getElementById('dateInput'); di.value=viewDate; di.max=realToday;
+}
+function setViewDate(ds){
+  if(ds>realToday) ds=realToday;
+  viewDate=ds; viewItems();
+  updateHeader(); renderTotals(); renderTodayList();
+}
+function shiftDay(delta){ const d=new Date(viewDate+'T00:00:00'); d.setDate(d.getDate()+delta); setViewDate(dateStr(d)); }
 
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function clean(n){ return n.replace(/_/g,' ').replace(/\s+/g,' ').trim(); }
@@ -297,7 +342,7 @@ function guessMeal(){ const h=new Date().getHours(); if(h<11)return '아침'; if
 
 function renderTotals(){
   let k=0,p=0,c=0,f=0;
-  todayItems().forEach(it=>{ k+=it.kcal; p+=it.p; c+=it.c; f+=it.f; });
+  viewItems().forEach(it=>{ k+=it.kcal; p+=it.p; c+=it.c; f+=it.f; });
   document.getElementById('totKcal').textContent = round(k);
   document.getElementById('goalKcal').textContent = '/ '+goals.kcal+' kcal';
   document.getElementById('totP').textContent = round(p,1);
@@ -368,7 +413,7 @@ function openAmt(name){
   const inp=document.getElementById('amtInput'); inp.value=''; inp.placeholder='그램('+unit+')';
   const qb=document.getElementById('qbtns'); qb.innerHTML='';
   const opts=[]; const w=parseWeight(curFood.weight);
-  if(w)opts.push({label:'1인분 '+round(w)+unit, val:w});
+  if(w)opts.push({label:(curFood.custom?'1개 ':'1인분 ')+round(w)+unit, val:w});
   [100,150,200].forEach(v=>opts.push({label:v+unit,val:v}));
   opts.forEach(o=>{ const b=document.createElement('button'); b.className='qbtn'; b.textContent=o.label;
     b.onclick=()=>{ inp.value=round(o.val,1); updateCalc(); [...qb.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
@@ -391,7 +436,7 @@ function closeAmt(){ document.getElementById('amtModal').classList.remove('on');
 function confirmAmt(){
   if(!curFood||!curGrams){ closeAmt(); return; }
   const m=macrosFor(curFood,curGrams);
-  todayItems().push({name:curFood.name, grams:curGrams, meal:curMeal,
+  viewItems().push({name:curFood.name, grams:curGrams, meal:curMeal,
     kcal:m.kcal, p:m.p, c:m.c, f:m.f, unit:(curFood.basis||'g').includes('ml')?'ml':'g'});
   LS.set('history',history);
   recent=[curFood.name,...recent.filter(n=>n!==curFood.name)].slice(0,30);
@@ -401,7 +446,7 @@ function confirmAmt(){
 
 function renderTodayList(){
   const el=document.getElementById('todayList');
-  const items=todayItems();
+  const items=viewItems();
   if(!items.length){ el.innerHTML='<div class="empty">아직 기록이 없습니다.</div>'; return; }
   let html='';
   MEALS.concat(['기타']).forEach(meal=>{
@@ -422,19 +467,73 @@ function renderTodayList(){
   });
   el.innerHTML=html;
 }
-function removeItem(i){ todayItems().splice(i,1); LS.set('history',history); renderTotals(); renderTodayList(); }
+function removeItem(i){ viewItems().splice(i,1); LS.set('history',history); renderTotals(); renderTodayList(); }
 
-function openCustom(){ document.getElementById('customModal').classList.add('on'); }
+let cMode='total', cCustomMeal='점심';
+function setCMode(m){
+  cMode=m;
+  document.querySelectorAll('#cModePick button').forEach(b=>b.classList.toggle('on', b.dataset.mode===m));
+  const total=m==='total';
+  document.getElementById('cModeDesc').textContent = total
+    ? '제품 총량과 그 총량의 성분을 넣으면 100g 기준으로 자동 환산해 저장합니다.'
+    : '100g 기준 성분을 직접 넣습니다. 제품 1회 용량은 선택 입력입니다.';
+  document.getElementById('cWeightLabel').textContent = total ? '제품 총량 (g) · 필수' : '제품 1회 용량 (g) · 선택';
+  document.getElementById('cKcalLabel').textContent = total ? '열량 (kcal)' : '열량 (kcal)';
+  updateCustomCalc();
+}
+function updateCustomCalc(){
+  const el=document.getElementById('cCalc');
+  if(cMode!=='total'){ el.style.display='none'; return; }
+  const w=parseFloat(document.getElementById('cWeight').value)||0;
+  if(!w){ el.style.display='none'; return; }
+  const f=100/w;
+  const k=(+document.getElementById('cKcal').value||0)*f;
+  const p=(+document.getElementById('cP').value||0)*f;
+  const c=(+document.getElementById('cC').value||0)*f;
+  const ft=(+document.getElementById('cF').value||0)*f;
+  el.style.display='block';
+  el.innerHTML=`<div class="crow"><span>100g 환산</span><span class="k num">${round(k)} kcal</span></div>
+    <div class="crow"><span class="mp">단백질</span><span class="num">${round(p,1)} g</span></div>
+    <div class="crow"><span class="mc">탄수화물</span><span class="num">${round(c,1)} g</span></div>
+    <div class="crow"><span class="mf">지방</span><span class="num">${round(ft,1)} g</span></div>`;
+}
+function openCustom(){
+  cCustomMeal=guessMeal(); setCMode('total');
+  const mp=document.getElementById('cMealPick'); mp.innerHTML='';
+  MEALS.forEach(m=>{ const b=document.createElement('button'); b.textContent=m; if(m===cCustomMeal)b.classList.add('on');
+    b.onclick=()=>{ cCustomMeal=m; [...mp.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+    mp.appendChild(b); });
+  document.getElementById('customModal').classList.add('on');
+}
 function closeCustom(){ document.getElementById('customModal').classList.remove('on'); }
-function saveCustom(){
+function saveCustom(andEat){
   const name=document.getElementById('cName').value.trim();
   if(!name){ document.getElementById('cName').focus(); return; }
-  custom.unshift({name, kcal:+document.getElementById('cKcal').value||0,
-    protein:+document.getElementById('cP').value||0, carb:+document.getElementById('cC').value||0,
-    fat:+document.getElementById('cF').value||0, basis:'100g', weight:'', custom:true});
-  LS.set('custom',custom);
-  ['cName','cKcal','cP','cC','cF'].forEach(id=>document.getElementById(id).value='');
-  closeCustom(); setTab('search'); document.getElementById('q').value=name; renderList();
+  const w=parseFloat(document.getElementById('cWeight').value)||0;
+  const ik=+document.getElementById('cKcal').value||0, ip=+document.getElementById('cP').value||0,
+        ic=+document.getElementById('cC').value||0, iff=+document.getElementById('cF').value||0;
+  let per100;
+  if(cMode==='total'){
+    if(!w){ document.getElementById('cWeight').focus(); return; }
+    const f=100/w;
+    per100={kcal:round(ik*f,1), protein:round(ip*f,1), carb:round(ic*f,1), fat:round(iff*f,1)};
+  } else {
+    per100={kcal:ik, protein:ip, carb:ic, fat:iff};
+  }
+  const food={name, ...per100, basis:'100g', weight:(w?round(w,1)+'g':''), custom:true};
+  custom.unshift(food); LS.set('custom',custom);
+  if(andEat){
+    const eatGrams = w || 100;
+    const m=macrosFor(food, eatGrams);
+    viewItems().push({name, grams:eatGrams, meal:cCustomMeal, kcal:m.kcal, p:m.p, c:m.c, f:m.f, unit:'g'});
+    LS.set('history',history);
+    recent=[name,...recent.filter(n=>n!==name)].slice(0,30); LS.set('recent',recent);
+  }
+  ['cName','cWeight','cKcal','cP','cC','cF'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cCalc').style.display='none';
+  closeCustom();
+  if(andEat){ renderTotals(); renderTodayList(); }
+  else { setTab('search'); document.getElementById('q').value=name; renderList(); }
 }
 
 // settings
@@ -482,7 +581,7 @@ function openReport(){
   R.rows.forEach((r,i)=>{
     const h=r.logged?Math.max(r.k/maxK*70,2):0;
     const dow=['일','월','화','수','목','금','토'][new Date(r.ds+'T00:00:00').getDay()];
-    const isToday=r.ds===todayStr?'today':'';
+    const isToday=r.ds===realToday?'today':'';
     bars+=`<div class="rep-day ${isToday}"><div class="rep-bar-wrap"><div class="rep-bar" style="height:${h}px;background:${r.logged?'var(--c)':'var(--line)'}"></div></div>
       <div class="d">${dow}</div><div class="v num">${r.logged?round(r.k):'-'}</div></div>`;
   });
@@ -553,17 +652,25 @@ function downloadReport(fmt){
   const blob=new Blob([text],{type:'text/'+(md?'markdown':'plain')+';charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download='끼니_주간리포트_'+todayStr+(md?'.md':'.txt'); a.click();
+  a.href=url; a.download='끼니_주간리포트_'+realToday+(md?'.md':'.txt'); a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 // init
-document.getElementById('date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 document.getElementById('q').addEventListener('input',renderList);
 document.getElementById('addCustom').onclick=openCustom;
 document.getElementById('btnSettings').onclick=openSettings;
 document.getElementById('btnReport').onclick=openReport;
+// date navigation
+document.getElementById('prevDay').onclick=()=>shiftDay(-1);
+document.getElementById('nextDay').onclick=()=>shiftDay(1);
+document.getElementById('datePick').onclick=()=>{ const di=document.getElementById('dateInput'); if(di.showPicker){ try{di.showPicker()}catch(e){di.click()} } else di.click(); };
+document.getElementById('dateInput').addEventListener('change',e=>{ if(e.target.value) setViewDate(e.target.value); });
+// custom modal
+document.querySelectorAll('#cModePick button').forEach(b=>b.onclick=()=>setCMode(b.dataset.mode));
+['cWeight','cKcal','cP','cC','cF'].forEach(id=>document.getElementById(id).addEventListener('input',updateCustomCalc));
+updateHeader();
 document.getElementById('list').addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b)return;
   if(b.dataset.act==='fav')toggleFav(b.dataset.name);
