@@ -126,7 +126,8 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 .navbtn{background:none;border:none;font-size:22px;color:var(--sub);cursor:pointer;padding:0 6px;line-height:1}
 .navbtn:disabled{opacity:.25}
 .datebtn{background:none;border:none;cursor:pointer;padding:2px 4px;display:flex;align-items:baseline;gap:6px;color:var(--ink)}
-.date-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:16px;top:40px}
+.datewrap{position:relative}
+.datewrap .dinput{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;padding:0;margin:0;background:none;cursor:pointer}
 .mode-pick{display:flex;gap:6px;margin-bottom:14px}
 .mode-pick button{flex:1;padding:9px 0;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13px;cursor:pointer;color:var(--sub);font-weight:600}
 .mode-pick button.on{border-color:var(--c);color:var(--c);background:#eff6ff}
@@ -162,9 +163,11 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
   <div class="hd-top">
     <div class="date-nav">
       <button class="navbtn" id="prevDay" title="이전 날">‹</button>
-      <button class="datebtn" id="datePick"><span class="hd-title" id="viewTitle">오늘</span><span class="hd-date num" id="date"></span></button>
+      <div class="datewrap">
+        <button class="datebtn" id="datePick"><span class="hd-title" id="viewTitle">오늘</span><span class="hd-date num" id="date"></span></button>
+        <input type="date" id="dateInput" class="dinput">
+      </div>
       <button class="navbtn" id="nextDay" title="다음 날">›</button>
-      <input type="date" id="dateInput" class="date-hidden">
     </div>
     <div class="hd-btns">
       <button class="iconbtn" id="btnReport" title="주간 리포트">📊</button>
@@ -665,8 +668,9 @@ document.getElementById('btnReport').onclick=openReport;
 // date navigation
 document.getElementById('prevDay').onclick=()=>shiftDay(-1);
 document.getElementById('nextDay').onclick=()=>shiftDay(1);
-document.getElementById('datePick').onclick=()=>{ const di=document.getElementById('dateInput'); if(di.showPicker){ try{di.showPicker()}catch(e){di.click()} } else di.click(); };
-document.getElementById('dateInput').addEventListener('change',e=>{ if(e.target.value) setViewDate(e.target.value); });
+const _di=document.getElementById('dateInput');
+_di.addEventListener('click',function(){ if(this.showPicker){ try{this.showPicker()}catch(e){} } });
+_di.addEventListener('change',e=>{ if(e.target.value) setViewDate(e.target.value); });
 // custom modal
 document.querySelectorAll('#cModePick button').forEach(b=>b.onclick=()=>setCMode(b.dataset.mode));
 ['cWeight','cKcal','cP','cC','cF'].forEach(id=>document.getElementById(id).addEventListener('input',updateCustomCalc));
