@@ -44,6 +44,21 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 .macro .g{color:var(--sub);font-weight:400}
 .macro span.lbl{color:var(--sub)}
 
+.activity-goal{margin-top:10px;padding-top:9px;border-top:1px solid var(--line2)}
+.activity-row{display:flex;align-items:center;gap:8px}
+.activity-row label{font-size:11.5px;color:var(--sub);font-weight:700;white-space:nowrap}
+.activity-select{flex:1;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:12.5px;font-weight:600;outline:none}
+.activity-select:focus{border-color:var(--c)}
+.kcal-guide{margin-top:7px;display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sub)}
+.kcal-guide b{color:var(--ink);font-weight:700}
+.protein-goal{margin-top:9px}
+.protein-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:5px}
+.protein-top .label{color:var(--sub);font-weight:700}
+.protein-top .state{font-weight:700;color:var(--p)}
+.protein-track{height:6px;border-radius:4px;background:var(--line2);overflow:hidden;position:relative}
+.protein-fill{height:100%;background:var(--p);width:0;transition:width .2s ease}
+.protein-mark{position:absolute;top:0;bottom:0;width:2px;background:#94a3b8;opacity:.75;left:87.5%}
+
 .tabs{display:flex;gap:4px;padding:10px 16px 0;background:var(--bg);position:sticky;top:0;z-index:10}
 .tab{flex:1;padding:9px 0;text-align:center;font-size:13.5px;font-weight:600;
   color:var(--sub);background:none;border:none;border-radius:9px;cursor:pointer}
@@ -185,6 +200,17 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
     <div class="macro"><span class="dot dc"></span><b class="num" id="totC">0</b><span class="g num" id="goalC"></span><span class="lbl">탄수</span></div>
     <div class="macro"><span class="dot df"></span><b class="num" id="totF">0</b><span class="g num" id="goalF"></span><span class="lbl">지방</span></div>
   </div>
+  <div class="activity-goal">
+    <div class="activity-row">
+      <label for="activityType">오늘 활동</label>
+      <select id="activityType" class="activity-select"></select>
+    </div>
+    <div class="kcal-guide"><span id="kcalRangeText">목표 범위</span><b class="num" id="kcalRemainText"></b></div>
+    <div class="protein-goal">
+      <div class="protein-top"><span class="label">단백질 목표 105~120g</span><span class="state num" id="proteinState">최소 목표까지 105g</span></div>
+      <div class="protein-track"><div class="protein-fill" id="proteinFill"></div><div class="protein-mark" title="최소 목표 105g"></div></div>
+    </div>
+  </div>
 </header>
 
 <div class="tabs">
@@ -203,7 +229,7 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
   <div id="todayList"></div>
 </div>
 
-<div style="text-align:center;font-size:11px;color:#cbd5e1;padding:8px 0 4px">제작 eonow687 · 버전 1.0</div>
+<div style="text-align:center;font-size:11px;color:#cbd5e1;padding:8px 0 4px">제작 eonow687 · 버전 1.1</div>
 <div class="fab"><button id="addCustom">＋ 목록에 없는 음식 직접 추가</button></div>
 
 <!-- amount modal -->
@@ -257,11 +283,11 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
 <!-- settings modal -->
 <div class="modal" id="settingsModal">
   <div class="sheet">
-    <h3>일일 목표</h3>
-    <div class="msub">이 목표를 기준으로 부족·과잉을 판정합니다. 본인 수치로 바꾸세요.</div>
+    <h3>기본 영양 목표</h3>
+    <div class="msub">칼로리는 위의 활동 유형별 범위를 사용합니다. 아래 값은 탄수·지방 등 기본 참고 목표입니다.</div>
     <div class="grid2">
-      <div class="field"><label>열량 (kcal)</label><input class="num" id="gKcal" type="number" inputmode="decimal"></div>
-      <div class="field"><label>단백질 (g)</label><input class="num" id="gP" type="number" inputmode="decimal"></div>
+      <div class="field"><label>기본 열량 참고값 (kcal)</label><input class="num" id="gKcal" type="number" inputmode="decimal"></div>
+      <div class="field"><label>단백질 최소목표 (고정 105g)</label><input class="num" id="gP" type="number" inputmode="decimal" value="105" disabled></div>
       <div class="field"><label>탄수화물 (g)</label><input class="num" id="gC" type="number" inputmode="decimal"></div>
       <div class="field"><label>지방 (g)</label><input class="num" id="gF" type="number" inputmode="decimal"></div>
     </div>
@@ -298,10 +324,10 @@ header{position:sticky;top:0;z-index:20;background:var(--card);
       <p><b>즐겨찾기</b>★를 누르면 자주 먹는 음식이 즐겨찾기 탭에 가나다순으로 모입니다.</p>
       <p><b>직접 추가</b>목록에 없으면 맨 아래 버튼으로 등록합니다. 제품 총량과 그 양의 성분을 넣으면 100g 기준으로 자동 환산됩니다. 직접 추가한 항목은 🗑로 지울 수 있습니다.</p>
       <p><b>지난 날 입력</b>상단 화살표로 어제나 그제로 옮겨 그날 기록을 넣거나 지웁니다.</p>
-      <p><b>목표와 리포트</b>⚙에서 하루 목표를 정하면 부족과 초과를 판정합니다. 📊에서 최근 7일 분석을 보고 마크다운이나 텍스트로 저장합니다.</p>
+      <p><b>목표와 리포트</b>상단 ‘오늘 활동’을 고르면 활동별 칼로리 범위가 자동 적용됩니다. 단백질은 105~120g 목표 진행률을 표시합니다. 📊에서 최근 7일 분석을 볼 수 있습니다.</p>
       <p><b>저장 위치</b>기록은 이 기기 브라우저에만 저장됩니다.</p>
     </div>
-    <p style="text-align:center;font-size:12px;color:#94a3b8;margin:8px 0 2px">제작 eonow687 · 버전 1.0</p>
+    <p style="text-align:center;font-size:12px;color:#94a3b8;margin:8px 0 2px">제작 eonow687 · 버전 1.1</p>
     <div class="row2" style="margin-top:6px"><button class="btn btn-primary" onclick="closeHelp()">확인</button></div>
   </div>
 </div>
@@ -317,8 +343,30 @@ const LS = {
 let favorites = LS.get('fav', []);
 let recent = LS.get('recent', []);
 let custom = LS.get('custom', []);
-let goals = LS.get('goals', {kcal:2000, p:90, c:250, f:60});
+let goals = LS.get('goals', {kcal:2000, p:105, c:250, f:60});
 let history = LS.get('history', null);
+
+// 12주 체성분 조정 계획: 활동별 kcal 범위 + 단백질 목표
+const PROTEIN_MIN = 105, PROTEIN_MAX = 120;
+const ACTIVITY_TARGETS = {
+  rest:{label:'휴식일', min:1800, max:1900},
+  office:{label:'일반 사무근무', min:1850, max:2000},
+  commute:{label:'장거리 통근', min:1950, max:2100},
+  easy:{label:'이지런', min:2050, max:2250},
+  commuteEasy:{label:'통근 + 이지런', min:2150, max:2300},
+  tempo:{label:'템포/품질훈련', min:2150, max:2300},
+  commuteTempo:{label:'통근 + 템포', min:2150, max:2300},
+  long:{label:'롱런', min:2350, max:2600},
+  longActive:{label:'롱런 + 활동 많은 주말', min:2450, max:2650}
+};
+let activities = LS.get('activities', {});
+function suggestedActivity(ds){
+  const dow=new Date(ds+'T00:00:00').getDay();
+  return ['long','commute','easy','commute','commuteTempo','commute','easy'][dow] || 'office';
+}
+function activityKey(ds){ return activities[ds] || suggestedActivity(ds); }
+function activityTarget(ds){ return ACTIVITY_TARGETS[activityKey(ds)] || ACTIVITY_TARGETS.office; }
+function saveActivity(key){ activities[viewDate]=key; LS.set('activities',activities); renderTotals(); }
 
 // migrate old single-day 'today' if present
 if(history===null){
@@ -366,17 +414,47 @@ function macrosFor(f, grams){ const r=grams/100; return {kcal:(f.kcal||0)*r, p:(
 function round(x,d=0){ const m=Math.pow(10,d); return Math.round(x*m)/m; }
 function guessMeal(){ const h=new Date().getHours(); if(h<11)return '아침'; if(h<16)return '점심'; if(h<21)return '저녁'; return '간식'; }
 
+function renderActivitySelector(){
+  const sel=document.getElementById('activityType');
+  if(!sel) return;
+  if(!sel.options.length){
+    Object.entries(ACTIVITY_TARGETS).forEach(([key,t])=>{
+      const o=document.createElement('option'); o.value=key; o.textContent=`${t.label} · ${t.min.toLocaleString()}~${t.max.toLocaleString()} kcal`; sel.appendChild(o);
+    });
+  }
+  sel.value=activityKey(viewDate);
+}
+
 function renderTotals(){
   let k=0,p=0,c=0,f=0;
   viewItems().forEach(it=>{ k+=it.kcal; p+=it.p; c+=it.c; f+=it.f; });
+  const target=activityTarget(viewDate);
+  renderActivitySelector();
+
   document.getElementById('totKcal').textContent = round(k);
-  document.getElementById('goalKcal').textContent = '/ '+goals.kcal+' kcal';
+  document.getElementById('goalKcal').textContent = `/ ${target.min.toLocaleString()}~${target.max.toLocaleString()} kcal`;
   document.getElementById('totP').textContent = round(p,1);
   document.getElementById('totC').textContent = round(c,1);
   document.getElementById('totF').textContent = round(f,1);
-  document.getElementById('goalP').textContent = '/'+goals.p;
+  document.getElementById('goalP').textContent = `/${PROTEIN_MIN}~${PROTEIN_MAX}`;
   document.getElementById('goalC').textContent = '/'+goals.c;
   document.getElementById('goalF').textContent = '/'+goals.f;
+
+  const range=document.getElementById('kcalRangeText');
+  const remain=document.getElementById('kcalRemainText');
+  range.textContent=`${ACTIVITY_TARGETS[activityKey(viewDate)].label} · ${target.min.toLocaleString()}~${target.max.toLocaleString()} kcal`;
+  if(k<target.min) remain.textContent=`권장범위까지 ${Math.max(0,round(target.min-k)).toLocaleString()}~${Math.max(0,round(target.max-k)).toLocaleString()} kcal`;
+  else if(k<=target.max) remain.textContent='✓ 목표 범위 안';
+  else remain.textContent=`범위 상단 +${round(k-target.max).toLocaleString()} kcal`;
+
+  const pFill=document.getElementById('proteinFill');
+  const pState=document.getElementById('proteinState');
+  const pct=Math.min(p/PROTEIN_MAX*100,100);
+  pFill.style.width=pct+'%';
+  if(p<PROTEIN_MIN) pState.textContent=`최소 목표까지 ${round(PROTEIN_MIN-p,1)}g`;
+  else if(p<=PROTEIN_MAX) pState.textContent='✓ 오늘 최소 목표 달성';
+  else pState.textContent=`${round(p,1)}g 섭취`;
+
   const gp=p*4, gc=c*4, gf=f*9, sum=gp+gc+gf;
   const bar=document.getElementById('bar').children;
   bar[0].style.width = sum?(gp/sum*100)+'%':'0';
@@ -573,14 +651,14 @@ function saveCustom(andEat){
 // settings
 function openSettings(){
   document.getElementById('gKcal').value=goals.kcal;
-  document.getElementById('gP').value=goals.p;
+  document.getElementById('gP').value=PROTEIN_MIN;
   document.getElementById('gC').value=goals.c;
   document.getElementById('gF').value=goals.f;
   document.getElementById('settingsModal').classList.add('on');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('on'); }
 function saveSettings(){
-  goals={ kcal:+document.getElementById('gKcal').value||0, p:+document.getElementById('gP').value||0,
+  goals={ kcal:+document.getElementById('gKcal').value||0, p:PROTEIN_MIN,
     c:+document.getElementById('gC').value||0, f:+document.getElementById('gF').value||0 };
   LS.set('goals',goals); closeSettings(); renderTotals();
 }
@@ -630,7 +708,7 @@ function openReport(){
   }
   let card=`<div class="rep-card"><h4>하루 평균 (기록된 날 기준) · 목표 대비</h4>`;
   card+=line('var(--kcal)','열량',a.k,goals.kcal,' kcal');
-  card+=line('var(--p)','단백질',a.p,goals.p,' g');
+  card+=line('var(--p)','단백질',a.p,PROTEIN_MIN,' g');
   card+=line('var(--c)','탄수화물',a.c,goals.c,' g');
   card+=line('var(--f)','지방',a.f,goals.f,' g');
   card+='</div>';
@@ -642,7 +720,7 @@ function openReport(){
 function buildNote(R){
   if(R.loggedCount===0) return '<div class="rep-note">최근 7일간 기록이 없습니다. 며칠 기록하면 분석이 나옵니다.</div>';
   const a=R.avg; const msgs=[];
-  const checks=[['단백질',a.p,goals.p],['열량',a.k,goals.kcal],['탄수화물',a.c,goals.c],['지방',a.f,goals.f]];
+  const checks=[['단백질',a.p,PROTEIN_MIN],['열량',a.k,goals.kcal],['탄수화물',a.c,goals.c],['지방',a.f,goals.f]];
   checks.forEach(([lbl,val,goal])=>{
     if(!goal) return;
     const r=val/goal;
@@ -663,7 +741,7 @@ function buildReportText(md){
   t+=H1+'끼니 주간 리포트'+nl;
   t+=R.days[0]+' ~ '+R.days[6]+'  (기록 '+R.loggedCount+'/7일)'+nl+nl;
   t+=H2+'하루 평균 (기록된 날 기준)'+H2e+nl;
-  const rows=[['열량',a.k,goals.kcal,'kcal'],['단백질',a.p,goals.p,'g'],['탄수화물',a.c,goals.c,'g'],['지방',a.f,goals.f,'g']];
+  const rows=[['열량',a.k,goals.kcal,'kcal'],['단백질',a.p,PROTEIN_MIN,'g'],['탄수화물',a.c,goals.c,'g'],['지방',a.f,goals.f,'g']];
   if(md){ t+='| 항목 | 평균 | 목표 | 달성 |'+nl+'|---|---|---|---|'+nl;
     rows.forEach(([l,v,g,u])=>{ t+=`| ${l} | ${round(v)}${u} | ${g}${u} | ${g?round(v/g*100):0}% |`+nl; });
   } else {
@@ -674,7 +752,7 @@ function buildReportText(md){
     t+=`- ${r.ds}(${dow}): ${r.logged?round(r.k)+'kcal, P'+round(r.p)+' C'+round(r.c)+' F'+round(r.f):'기록 없음'}`+nl; });
   t+=nl+H2+'평가'+H2e+nl;
   const notes=[];
-  [['단백질',a.p,goals.p],['열량',a.k,goals.kcal],['탄수화물',a.c,goals.c],['지방',a.f,goals.f]].forEach(([l,v,g])=>{
+  [['단백질',a.p,PROTEIN_MIN],['열량',a.k,goals.kcal],['탄수화물',a.c,goals.c],['지방',a.f,goals.f]].forEach(([l,v,g])=>{
     if(!g)return; const rr=v/g;
     if(rr<0.9)notes.push(`${l} 부족 (${round(rr*100)}%)`);
     else if(rr>1.1)notes.push(`${l} 초과 (${round(rr*100)}%)`);
@@ -699,6 +777,7 @@ document.getElementById('addCustom').onclick=openCustom;
 document.getElementById('btnSettings').onclick=openSettings;
 document.getElementById('btnReport').onclick=openReport;
 document.getElementById('btnHelp').onclick=openHelp;
+document.getElementById('activityType').addEventListener('change',e=>saveActivity(e.target.value));
 // date navigation
 document.getElementById('prevDay').onclick=()=>shiftDay(-1);
 document.getElementById('nextDay').onclick=()=>shiftDay(1);
